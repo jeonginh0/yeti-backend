@@ -1,3 +1,46 @@
 spring:
   application:
     name: backend
+  datasource:
+    url: ${DATABASE_URL}
+    username: ${DATABASE_USERNAME:}
+    password: ${DATABASE_PASSWORD:}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+  data:
+    redis:
+      url: ${REDIS_URL:redis://localhost:6379}
+  ai:
+    openai:
+      api-key: ${SPRING_AI_OPENAI_API_KEY}
+      chat:
+        options:
+          model: gpt-4o-mini
+
+jwt:
+  secret: ${JWT_SECRET:default-secret-key-for-development-must-be-at-least-32-bytes}
+  access-expiration: 900
+  refresh-expiration: 2592000
+
+oauth2:
+  google:
+    client-id: ${GOOGLE_CLIENT_ID:}
+  kakao:
+    client-id: ${KAKAO_CLIENT_ID:}
+
+cors:
+  allowed-origins:
+    - https://repave-radiation-deflector.ngrok-free.dev
+    - ${FRONTEND_URL:http://localhost:8081}
+
+logging:
+  level:
+    org.hibernate.SQL: DEBUG
+    org.hibernate.orm.jdbc.bind: TRACE
