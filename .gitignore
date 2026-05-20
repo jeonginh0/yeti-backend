@@ -42,5 +42,6 @@ src/main/generated
 .claude/
 
 Ai_schedule_production.docx
+yeti-e0e37-firebase-adminsdk-fbsvc-1dfcfdcd0a.json
 
 .env

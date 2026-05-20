@@ -10,6 +10,7 @@ import itey.backend.domain.user.entity.User;
 import itey.backend.domain.user.entity.enums.FriendshipStatus;
 import itey.backend.domain.user.repository.FriendshipRepository;
 import itey.backend.domain.user.repository.UserRepository;
+import itey.backend.global.fcm.FcmService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -18,6 +19,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -29,6 +31,7 @@ public class ScheduleService {
     private final ScheduleParticipantRepository participantRepository;
     private final UserRepository userRepository;
     private final FriendshipRepository friendshipRepository;
+    private final FcmService fcmService;
 
     public ScheduleDetailResponse createSchedule(UUID ownerId, ScheduleCreateRequest req) {
         User owner = findUser(ownerId);
@@ -72,6 +75,17 @@ public class ScheduleService {
                     })
                     .toList();
             participantRepository.saveAll(participants);
+
+            List<String> tokens = participants.stream()
+                    .map(p -> p.getUser().getFcmToken())
+                    .filter(t -> t != null && !t.isBlank())
+                    .toList();
+            if (!tokens.isEmpty()) {
+                fcmService.sendToTokens(tokens,
+                        "공동 일정 초대",
+                        owner.getNickname() + "님이 '" + schedule.getTitle() + "'에 초대했습니다.",
+                        Map.of("type", "SCHEDULE_INVITE", "scheduleId", schedule.getId().toString()));
+            }
         }
 
         return ScheduleDetailResponse.from(schedule, participants);

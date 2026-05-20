@@ -3,6 +3,7 @@ package itey.backend.domain.chat.controller;
 import itey.backend.domain.chat.dto.ChatMessageRequest;
 import itey.backend.domain.chat.dto.MessageResponse;
 import itey.backend.domain.chat.service.ChatService;
+import itey.backend.domain.chat.service.ChatNotificationService;
 import itey.backend.domain.chat.service.RedisMessagePublisher;
 import itey.backend.global.security.UserPrincipal;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +20,7 @@ public class ChatWebSocketController {
 
     private final ChatService chatService;
     private final RedisMessagePublisher publisher;
+    private final ChatNotificationService chatNotificationService;
 
     @MessageMapping("/chat/rooms/{roomId}/send")
     public void sendMessage(
@@ -27,5 +29,6 @@ public class ChatWebSocketController {
             ChatMessageRequest request) {
         MessageResponse response = chatService.saveMessage(roomId, principal.getId(), request);
         publisher.publish(roomId, response);
+        chatNotificationService.notifyRoomMembers(roomId, principal.getId(), response);
     }
 }
