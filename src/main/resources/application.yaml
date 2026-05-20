@@ -35,6 +35,12 @@ oauth2:
   kakao:
     client-id: ${KAKAO_CLIENT_ID:}
 
+supabase:
+  url: ${SUPABASE_URL}
+  service-role-key: ${SUPABASE_SERVICE_ROLE_KEY}
+  storage:
+    bucket: ${SUPABASE_STORAGE_BUCKET:chat-media}
+
 cors:
   allowed-origins:
     - https://repave-radiation-deflector.ngrok-free.dev

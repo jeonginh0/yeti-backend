@@ -76,4 +76,8 @@ public class Message {
         this.deletedAt = LocalDateTime.now();
         this.content = "삭제된 메시지";
     }
+
+    public void updateReactions(String reactions) {
+        this.reactions = reactions;
+    }
 }
