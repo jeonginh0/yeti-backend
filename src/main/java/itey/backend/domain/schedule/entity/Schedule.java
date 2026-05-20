@@ -75,6 +75,22 @@ public class Schedule extends BaseTimeEntity {
 
     private Float aiConfidence;
 
+    public void update(String title, String description, String category,
+                       LocalDateTime startAt, LocalDateTime endAt, boolean allDay,
+                       String location, boolean recurring, String recurrenceRule,
+                       VisibilityType visibility) {
+        this.title = title;
+        this.description = description;
+        this.category = category;
+        this.startAt = startAt;
+        this.endAt = endAt;
+        this.allDay = allDay;
+        this.location = location;
+        this.recurring = recurring;
+        this.recurrenceRule = recurrenceRule;
+        this.visibility = visibility;
+    }
+
     public void complete() {
         this.completed = true;
         this.completedAt = LocalDateTime.now();

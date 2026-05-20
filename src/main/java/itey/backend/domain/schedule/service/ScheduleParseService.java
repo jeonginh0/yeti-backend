@@ -1,0 +1,153 @@
+package itey.backend.domain.schedule.service;
+
+import itey.backend.domain.log.entity.AiParseLog;
+import itey.backend.domain.log.repository.AiParseLogRepository;
+import itey.backend.domain.schedule.dto.ParseResponse;
+import itey.backend.domain.schedule.dto.ParsedScheduleResult;
+import itey.backend.domain.user.entity.User;
+import itey.backend.domain.user.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.model.ChatResponse;
+import org.springframework.ai.converter.BeanOutputConverter;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.math.BigDecimal;
+import java.time.Duration;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeParseException;
+import java.util.List;
+import java.util.UUID;
+
+@Service
+@RequiredArgsConstructor
+public class ScheduleParseService {
+
+    private static final int DAILY_LIMIT = 50;
+    private static final BigDecimal INPUT_COST_PER_TOKEN = new BigDecimal("0.00000015");
+    private static final BigDecimal OUTPUT_COST_PER_TOKEN = new BigDecimal("0.0000006");
+
+    private final ChatClient chatClient;
+    private final StringRedisTemplate redisTemplate;
+    private final AiParseLogRepository aiParseLogRepository;
+    private final UserRepository userRepository;
+
+    public ParseResponse parse(UUID userId, String input) {
+        checkDailyLimit(userId);
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다."));
+
+        BeanOutputConverter<ParsedScheduleResult> converter =
+                new BeanOutputConverter<>(ParsedScheduleResult.class);
+
+        String systemPrompt = buildSystemPrompt();
+        String userMessage = input + "\n\n" + converter.getFormat();
+
+        try {
+            ChatResponse chatResponse = chatClient.prompt()
+                    .system(systemPrompt)
+                    .user(userMessage)
+                    .call()
+                    .chatResponse();
+
+            String content = chatResponse.getResult().getOutput().getText();
+            ParsedScheduleResult result = converter.convert(content);
+
+            int promptTokens = chatResponse.getMetadata().getUsage().getPromptTokens();
+            int completionTokens = chatResponse.getMetadata().getUsage().getCompletionTokens();
+            BigDecimal cost = INPUT_COST_PER_TOKEN.multiply(BigDecimal.valueOf(promptTokens))
+                    .add(OUTPUT_COST_PER_TOKEN.multiply(BigDecimal.valueOf(completionTokens)));
+
+            aiParseLogRepository.save(AiParseLog.builder()
+                    .user(user)
+                    .rawInput(input)
+                    .parsedResult(content)
+                    .confidence(result.getAiConfidence())
+                    .tokensUsed(promptTokens + completionTokens)
+                    .costUsd(cost)
+                    .planStatus(user.getPlanStatus().name())
+                    .success(true)
+                    .build());
+
+            incrementDailyCounter(userId);
+
+            return toParseResponse(result);
+
+        } catch (ResponseStatusException e) {
+            throw e;
+        } catch (Exception e) {
+            aiParseLogRepository.save(AiParseLog.builder()
+                    .user(user)
+                    .rawInput(input)
+                    .planStatus(user.getPlanStatus().name())
+                    .success(false)
+                    .errorMessage(e.getMessage())
+                    .build());
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "AI 파싱에 실패했습니다.");
+        }
+    }
+
+    private void checkDailyLimit(UUID userId) {
+        String key = dailyKey(userId);
+        String count = redisTemplate.opsForValue().get(key);
+        if (count != null && Integer.parseInt(count) >= DAILY_LIMIT) {
+            throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS,
+                    "일일 AI 파싱 횟수 한도(" + DAILY_LIMIT + "회)를 초과했습니다.");
+        }
+    }
+
+    private void incrementDailyCounter(UUID userId) {
+        String key = dailyKey(userId);
+        redisTemplate.opsForValue().increment(key);
+        redisTemplate.expire(key, Duration.ofDays(1));
+    }
+
+    private String dailyKey(UUID userId) {
+        return "ai:parse:" + userId + ":" + LocalDate.now();
+    }
+
+    private String buildSystemPrompt() {
+        return """
+                당신은 한국어 자연어 일정 파싱 전문가입니다.
+                현재 날짜/시간: %s
+
+                사용자 입력에서 일정 정보를 추출하세요. 규칙:
+                - category: 반드시 학습, 운동, 약속, 업무, 기타 중 하나
+                - startAt, endAt: ISO-8601 형식 (yyyy-MM-ddTHH:mm:ss), 시간이 불명확하면 null
+                - 상대적 날짜(내일, 모레, 다음주 등)는 현재 날짜 기준 절대 날짜로 변환
+                - participants: @태그된 username 목록 (@ 기호 제외), 없으면 빈 배열
+                - aiConfidence: 파싱 정확도 확신도 (0.0~1.0), 정보가 불명확하거나 누락될수록 낮게 설정
+                """.formatted(LocalDateTime.now());
+    }
+
+    private ParseResponse toParseResponse(ParsedScheduleResult result) {
+        LocalDateTime startAt = parseDateTime(result.getStartAt());
+        LocalDateTime endAt = parseDateTime(result.getEndAt());
+        float confidence = result.getAiConfidence() != null ? result.getAiConfidence() : 0f;
+
+        return new ParseResponse(
+                result.getTitle(),
+                result.getCategory(),
+                startAt,
+                endAt,
+                result.getParticipants() != null ? result.getParticipants() : List.of(),
+                result.getLocation(),
+                confidence,
+                confidence < 0.7f
+        );
+    }
+
+    private LocalDateTime parseDateTime(String value) {
+        if (value == null || value.isBlank()) return null;
+        try {
+            return LocalDateTime.parse(value);
+        } catch (DateTimeParseException e) {
+            return null;
+        }
+    }
+}
