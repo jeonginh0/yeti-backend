@@ -37,6 +37,9 @@ public class StudyNote extends BaseTimeEntity {
     @Column(columnDefinition = "text")
     private String aiSummary;
 
+    @Column(columnDefinition = "text")
+    private String aiFeedback;
+
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "image_urls", columnDefinition = "jsonb")
     @Builder.Default
@@ -46,7 +49,8 @@ public class StudyNote extends BaseTimeEntity {
         this.content = content;
     }
 
-    public void saveAiSummary(String summary) {
+    public void saveAiResult(String summary, String feedback) {
         this.aiSummary = summary;
+        this.aiFeedback = feedback;
     }
 }
