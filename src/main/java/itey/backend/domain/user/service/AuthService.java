@@ -164,6 +164,12 @@ public class AuthService {
         );
     }
 
+    public void registerFcmToken(UUID userId, String fcmToken) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다."));
+        user.updateFcmToken(fcmToken);
+    }
+
     private User createUser(OAuthUserInfo userInfo, Provider provider) {
         LocalDateTime now = LocalDateTime.now();
         String nickname = userInfo.getNickname() != null

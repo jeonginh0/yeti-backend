@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import itey.backend.domain.user.dto.EmailLoginRequest;
 import itey.backend.domain.user.dto.EmailSignupRequest;
+import itey.backend.domain.user.dto.FcmTokenRequest;
 import itey.backend.domain.user.dto.OAuthLoginRequest;
 import itey.backend.domain.user.dto.OnboardingRequest;
 import itey.backend.domain.user.dto.PlanStatusResponse;
@@ -115,6 +116,15 @@ public class AuthController {
             @AuthenticationPrincipal UserPrincipal principal,
             @RequestBody OnboardingRequest request) {
         authService.completeOnboarding(principal.getId(), request.getUsername(), request.getNickname());
+        return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "FCM 토큰 등록", security = @SecurityRequirement(name = "Bearer"))
+    @PatchMapping("/fcm-token")
+    public ResponseEntity<Void> registerFcmToken(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @RequestBody FcmTokenRequest request) {
+        authService.registerFcmToken(principal.getId(), request.getFcmToken());
         return ResponseEntity.ok().build();
     }
 
