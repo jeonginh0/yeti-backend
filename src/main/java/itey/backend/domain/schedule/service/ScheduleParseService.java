@@ -121,6 +121,8 @@ public class ScheduleParseService {
                 - startAt, endAt: ISO-8601 형식 (yyyy-MM-ddTHH:mm:ss), 시간이 불명확하면 null
                 - 상대적 날짜(내일, 모레, 다음주 등)는 현재 날짜 기준 절대 날짜로 변환
                 - participants: @태그된 username 목록 (@ 기호 제외), 없으면 빈 배열
+                - recurring: 반복 일정 여부 (매일/매주/매월 등 반복 표현이 있으면 true)
+                - recurrenceRule: recurring이 true일 때만 iCal RRULE 형식으로 작성 (예: FREQ=WEEKLY;BYDAY=MO, FREQ=DAILY, FREQ=MONTHLY;BYMONTHDAY=1), 없으면 null
                 - aiConfidence: 파싱 정확도 확신도 (0.0~1.0), 정보가 불명확하거나 누락될수록 낮게 설정
                 """.formatted(LocalDateTime.now());
     }
@@ -129,6 +131,7 @@ public class ScheduleParseService {
         LocalDateTime startAt = parseDateTime(result.getStartAt());
         LocalDateTime endAt = parseDateTime(result.getEndAt());
         float confidence = result.getAiConfidence() != null ? result.getAiConfidence() : 0f;
+        boolean recurring = Boolean.TRUE.equals(result.getRecurring());
 
         return new ParseResponse(
                 result.getTitle(),
@@ -137,6 +140,8 @@ public class ScheduleParseService {
                 endAt,
                 result.getParticipants() != null ? result.getParticipants() : List.of(),
                 result.getLocation(),
+                recurring,
+                recurring ? result.getRecurrenceRule() : null,
                 confidence,
                 confidence < 0.7f
         );

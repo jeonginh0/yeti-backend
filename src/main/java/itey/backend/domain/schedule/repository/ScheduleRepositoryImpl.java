@@ -6,6 +6,7 @@ import com.querydsl.jpa.impl.JPAQueryFactory;
 import itey.backend.domain.schedule.entity.QSchedule;
 import itey.backend.domain.schedule.entity.QScheduleParticipant;
 import itey.backend.domain.schedule.entity.Schedule;
+import itey.backend.domain.schedule.entity.enums.ParticipantStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
@@ -30,8 +31,7 @@ public class ScheduleRepositoryImpl implements ScheduleRepositoryCustom {
                 .where(
                         ownerOrParticipant(userId),
                         categoryEq(category),
-                        startAtGoe(from),
-                        startAtLoe(to)
+                        dateRangeFilter(from, to)
                 )
                 .orderBy(s.startAt.asc())
                 .fetch();
@@ -41,7 +41,9 @@ public class ScheduleRepositoryImpl implements ScheduleRepositoryCustom {
         return s.owner.id.eq(userId).or(
                 JPAExpressions.selectOne()
                         .from(sp)
-                        .where(sp.schedule.eq(s).and(sp.user.id.eq(userId)))
+                        .where(sp.schedule.eq(s)
+                                .and(sp.user.id.eq(userId))
+                                .and(sp.status.eq(ParticipantStatus.ACCEPTED)))
                         .exists()
         );
     }
@@ -50,11 +52,16 @@ public class ScheduleRepositoryImpl implements ScheduleRepositoryCustom {
         return category != null ? s.category.eq(category) : null;
     }
 
-    private BooleanExpression startAtGoe(LocalDateTime from) {
-        return from != null ? s.startAt.goe(from) : null;
-    }
+    private BooleanExpression dateRangeFilter(LocalDateTime from, LocalDateTime to) {
+        // 반복 일정: 시작일이 조회 범위 종료 이전이면 포함 (프론트에서 RRULE 기반 확장)
+        BooleanExpression recurring = s.recurring.isTrue()
+                .and(to != null ? s.startAt.loe(to) : null);
 
-    private BooleanExpression startAtLoe(LocalDateTime to) {
-        return to != null ? s.startAt.loe(to) : null;
+        // 일반 일정: startAt이 조회 범위 내에 있어야 함
+        BooleanExpression nonRecurring = s.recurring.isFalse()
+                .and(from != null ? s.startAt.goe(from) : null)
+                .and(to != null ? s.startAt.loe(to) : null);
+
+        return recurring.or(nonRecurring);
     }
 }

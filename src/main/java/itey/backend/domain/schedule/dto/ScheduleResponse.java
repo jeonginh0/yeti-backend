@@ -19,6 +19,8 @@ public class ScheduleResponse {
     private LocalDateTime endAt;
     private boolean allDay;
     private String location;
+    private boolean recurring;
+    private String recurrenceRule;
     private boolean completed;
     private String visibility;
     private boolean owner;
@@ -32,6 +34,8 @@ public class ScheduleResponse {
                 schedule.getEndAt(),
                 schedule.isAllDay(),
                 schedule.getLocation(),
+                schedule.isRecurring(),
+                schedule.getRecurrenceRule(),
                 schedule.isCompleted(),
                 schedule.getVisibility().name(),
                 schedule.getOwner().getId().equals(currentUserId)

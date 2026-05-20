@@ -17,6 +17,8 @@ public class ParseResponse {
     private LocalDateTime endAt;
     private List<String> participants;
     private String location;
+    private boolean recurring;
+    private String recurrenceRule;
     private Float aiConfidence;
     private boolean clarificationRequired;
 }

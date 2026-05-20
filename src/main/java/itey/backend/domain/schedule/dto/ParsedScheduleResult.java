@@ -16,5 +16,7 @@ public class ParsedScheduleResult {
     private String endAt;
     private List<String> participants;
     private String location;
+    private Boolean recurring;
+    private String recurrenceRule;
     private Float aiConfidence;
 }

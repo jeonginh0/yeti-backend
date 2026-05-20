@@ -17,7 +17,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 @Tag(name = "Schedule", description = "일정 API")
@@ -29,6 +28,13 @@ public class ScheduleController {
 
     private final ScheduleService scheduleService;
     private final ScheduleParseService scheduleParseService;
+
+    @Operation(summary = "받은 일정 초대 목록 (PENDING)")
+    @GetMapping("/invitations")
+    public ResponseEntity<List<InvitationResponse>> getInvitations(
+            @AuthenticationPrincipal UserPrincipal principal) {
+        return ResponseEntity.ok(scheduleService.getInvitations(principal.getId()));
+    }
 
     @Operation(summary = "자연어 일정 파싱 (AI)")
     @PostMapping("/parse")
@@ -93,25 +99,22 @@ public class ScheduleController {
     }
 
     @Operation(summary = "참여 수락/거절")
-    @PatchMapping("/{scheduleId}/participants/{userId}")
+    @PatchMapping("/{scheduleId}/respond")
     public ResponseEntity<Void> respondToInvitation(
             @AuthenticationPrincipal UserPrincipal principal,
             @PathVariable UUID scheduleId,
-            @PathVariable UUID userId,
-            @RequestBody Map<String, String> body) {
-        String action = body.get("action");
-        scheduleService.respondToInvitation(scheduleId, userId, principal.getId(), action);
+            @Valid @RequestBody InvitationRespondRequest request) {
+        scheduleService.respondToInvitation(scheduleId, principal.getId(), request.getAction());
         return ResponseEntity.ok().build();
     }
 
     @Operation(summary = "시간 조율 제안")
-    @PostMapping("/{scheduleId}/participants/{userId}/adjust")
+    @PostMapping("/{scheduleId}/adjust")
     public ResponseEntity<Void> proposeAdjust(
             @AuthenticationPrincipal UserPrincipal principal,
             @PathVariable UUID scheduleId,
-            @PathVariable UUID userId,
             @Valid @RequestBody AdjustRequest request) {
-        scheduleService.proposeAdjust(scheduleId, userId, principal.getId(), request);
+        scheduleService.proposeAdjust(scheduleId, principal.getId(), request);
         return ResponseEntity.ok().build();
     }
 }

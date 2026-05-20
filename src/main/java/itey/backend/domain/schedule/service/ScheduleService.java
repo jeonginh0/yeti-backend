@@ -3,6 +3,7 @@ package itey.backend.domain.schedule.service;
 import itey.backend.domain.schedule.dto.*;
 import itey.backend.domain.schedule.entity.Schedule;
 import itey.backend.domain.schedule.entity.ScheduleParticipant;
+import itey.backend.domain.schedule.entity.enums.ParticipantStatus;
 import itey.backend.domain.schedule.entity.enums.VisibilityType;
 import itey.backend.domain.schedule.repository.ScheduleParticipantRepository;
 import itey.backend.domain.schedule.repository.ScheduleRepository;
@@ -134,14 +135,22 @@ public class ScheduleService {
         schedule.complete();
     }
 
-    public void respondToInvitation(UUID scheduleId, UUID participantUserId, UUID requesterId, String action) {
-        if (!participantUserId.equals(requesterId)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "본인의 초대에만 응답할 수 있습니다.");
-        }
+    @Transactional(readOnly = true)
+    public List<InvitationResponse> getInvitations(UUID userId) {
+        return participantRepository.findByUserIdAndStatus(userId, ParticipantStatus.PENDING)
+                .stream()
+                .map(InvitationResponse::from)
+                .toList();
+    }
 
+    public void respondToInvitation(UUID scheduleId, UUID userId, String action) {
         ScheduleParticipant participant = participantRepository
-                .findByScheduleIdAndUserId(scheduleId, participantUserId)
+                .findByScheduleIdAndUserId(scheduleId, userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "초대 내역을 찾을 수 없습니다."));
+
+        if (participant.getStatus() != ParticipantStatus.PENDING) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "이미 처리된 초대입니다.");
+        }
 
         switch (action.toUpperCase()) {
             case "ACCEPT" -> participant.accept();
@@ -150,13 +159,9 @@ public class ScheduleService {
         }
     }
 
-    public void proposeAdjust(UUID scheduleId, UUID participantUserId, UUID requesterId, AdjustRequest req) {
-        if (!participantUserId.equals(requesterId)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "본인의 초대에만 응답할 수 있습니다.");
-        }
-
+    public void proposeAdjust(UUID scheduleId, UUID userId, AdjustRequest req) {
         ScheduleParticipant participant = participantRepository
-                .findByScheduleIdAndUserId(scheduleId, participantUserId)
+                .findByScheduleIdAndUserId(scheduleId, userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "초대 내역을 찾을 수 없습니다."));
 
         participant.requestAdjust(req.getProposedStart(), req.getProposedEnd());

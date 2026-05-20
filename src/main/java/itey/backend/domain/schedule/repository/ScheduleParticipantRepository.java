@@ -1,6 +1,7 @@
 package itey.backend.domain.schedule.repository;
 
 import itey.backend.domain.schedule.entity.ScheduleParticipant;
+import itey.backend.domain.schedule.entity.enums.ParticipantStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
@@ -14,4 +15,6 @@ public interface ScheduleParticipantRepository extends JpaRepository<SchedulePar
     Optional<ScheduleParticipant> findByScheduleIdAndUserId(UUID scheduleId, UUID userId);
 
     void deleteByScheduleId(UUID scheduleId);
+
+    List<ScheduleParticipant> findByUserIdAndStatus(UUID userId, ParticipantStatus status);
 }
