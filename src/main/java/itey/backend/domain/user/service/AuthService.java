@@ -3,9 +3,11 @@ package itey.backend.domain.user.service;
 import itey.backend.domain.user.dto.PlanStatusResponse;
 import itey.backend.domain.user.dto.TokenResponse;
 import itey.backend.domain.user.entity.User;
+import itey.backend.domain.user.entity.UserSettings;
 import itey.backend.domain.user.entity.enums.PlanStatus;
 import itey.backend.domain.user.entity.enums.Provider;
 import itey.backend.domain.user.repository.UserRepository;
+import itey.backend.domain.user.repository.UserSettingsRepository;
 import itey.backend.global.oauth.OAuthClient;
 import itey.backend.global.oauth.OAuthUserInfo;
 import itey.backend.global.security.JwtProvider;
@@ -28,17 +30,20 @@ import java.util.stream.Collectors;
 public class AuthService {
 
     private final UserRepository userRepository;
+    private final UserSettingsRepository userSettingsRepository;
     private final JwtProvider jwtProvider;
     private final TokenService tokenService;
     private final PasswordEncoder passwordEncoder;
     private final Map<Provider, OAuthClient> oauthClients;
 
     public AuthService(UserRepository userRepository,
+                       UserSettingsRepository userSettingsRepository,
                        JwtProvider jwtProvider,
                        TokenService tokenService,
                        PasswordEncoder passwordEncoder,
                        List<OAuthClient> oauthClientList) {
         this.userRepository = userRepository;
+        this.userSettingsRepository = userSettingsRepository;
         this.jwtProvider = jwtProvider;
         this.tokenService = tokenService;
         this.passwordEncoder = passwordEncoder;
@@ -187,6 +192,12 @@ public class AuthService {
                 .trialEndsAt(now.plusDays(7))
                 .build();
 
-        return userRepository.save(user);
+        User saved = userRepository.save(user);
+        createDefaultSettings(saved);
+        return saved;
+    }
+
+    private void createDefaultSettings(User user) {
+        userSettingsRepository.save(UserSettings.builder().user(user).build());
     }
 }

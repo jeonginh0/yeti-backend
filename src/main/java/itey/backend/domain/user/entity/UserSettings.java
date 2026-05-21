@@ -43,4 +43,13 @@ public class UserSettings {
     private String language = "ko";
 
     private LocalDateTime updatedAt;
+
+    public void update(Integer notifyBeforeMin, Boolean notifyOnInvite, Boolean notifyOnChat, String theme, String language) {
+        if (notifyBeforeMin != null) this.notifyBeforeMin = notifyBeforeMin;
+        if (notifyOnInvite != null) this.notifyOnInvite = notifyOnInvite;
+        if (notifyOnChat != null) this.notifyOnChat = notifyOnChat;
+        if (theme != null) this.theme = theme;
+        if (language != null) this.language = language;
+        this.updatedAt = LocalDateTime.now();
+    }
 }
