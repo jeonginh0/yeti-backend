@@ -125,14 +125,13 @@ public class ChatService {
         }
 
         List<Message> messages;
-        PageRequest pageable = PageRequest.of(0, size);
 
         if (beforeId != null) {
             Message cursor = messageRepository.findById(beforeId)
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "메시지를 찾을 수 없습니다."));
-            messages = messageRepository.findBefore(roomId, cursor.getCreatedAt(), pageable);
+            messages = messageRepository.findBeforeWithSender(roomId, cursor.getCreatedAt(), size);
         } else {
-            messages = messageRepository.findLatest(roomId, pageable);
+            messages = messageRepository.findLatestWithSender(roomId, size);
         }
 
         return messages.stream().map(MessageResponse::from).toList();

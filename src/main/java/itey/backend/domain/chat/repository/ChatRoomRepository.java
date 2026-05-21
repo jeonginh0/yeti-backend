@@ -6,19 +6,10 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 public interface ChatRoomRepository extends JpaRepository<ChatRoom, UUID>, ChatRoomRepositoryCustom {
-
-    @Query("""
-            SELECT r FROM ChatRoom r
-            JOIN ChatRoomMember m ON m.room = r
-            WHERE m.user.id = :userId AND r.active = true
-            ORDER BY r.createdAt DESC
-            """)
-    List<ChatRoom> findRoomsByUserId(@Param("userId") UUID userId);
 
     @Query("""
             SELECT m1.room FROM ChatRoomMember m1
