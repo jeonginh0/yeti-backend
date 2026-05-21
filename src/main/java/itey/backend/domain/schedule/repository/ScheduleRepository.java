@@ -10,4 +10,6 @@ import java.util.UUID;
 public interface ScheduleRepository extends JpaRepository<Schedule, UUID>, ScheduleRepositoryCustom {
 
     List<Schedule> findByStartAtBetween(LocalDateTime from, LocalDateTime to);
+
+    long countByCreatedAtGreaterThanEqual(LocalDateTime from);
 }
