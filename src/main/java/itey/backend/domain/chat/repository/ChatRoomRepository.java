@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-public interface ChatRoomRepository extends JpaRepository<ChatRoom, UUID> {
+public interface ChatRoomRepository extends JpaRepository<ChatRoom, UUID>, ChatRoomRepositoryCustom {
 
     @Query("""
             SELECT r FROM ChatRoom r

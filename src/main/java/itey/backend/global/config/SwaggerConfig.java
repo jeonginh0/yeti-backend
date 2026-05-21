@@ -29,7 +29,7 @@ public class SwaggerConfig {
                         new Server().url("https://repave-radiation-deflector.ngrok-free.dev").description("개발 서버 (ngrok)"),
                         new Server().url("http://localhost:8080").description("로컬")
                 ))
-                .addSecurityItem(new SecurityRequirement().addList("Bearer"))
-                .components(new Components().addSecuritySchemes("Bearer", bearerScheme));
+                .addSecurityItem(new SecurityRequirement().addList("bearerAuth"))
+                .components(new Components().addSecuritySchemes("bearerAuth", bearerScheme));
     }
 }

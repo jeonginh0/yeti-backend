@@ -49,7 +49,12 @@ cors:
     - https://repave-radiation-deflector.ngrok-free.dev
     - ${FRONTEND_URL:http://localhost:8081}
 
+decorator:
+  datasource:
+    p6spy:
+      enable-logging: true
+
 logging:
   level:
-    org.hibernate.SQL: DEBUG
-    org.hibernate.orm.jdbc.bind: TRACE
+    org.hibernate.SQL: OFF
+    org.hibernate.orm.jdbc.bind: OFF

@@ -44,16 +44,12 @@ public class ChatService {
 
     @Transactional(readOnly = true)
     public List<ChatRoomResponse> getMyRooms(UUID userId) {
-        List<ChatRoom> rooms = chatRoomRepository.findRoomsByUserId(userId);
-        return rooms.stream().map(room -> {
-            int memberCount = chatRoomMemberRepository.countByRoomId(room.getId());
-            ChatRoomMember member = chatRoomMemberRepository.findByRoomIdAndUserId(room.getId(), userId).orElse(null);
-            long unreadCount = 0;
-            if (member != null && member.getLastReadAt() != null) {
-                unreadCount = messageRepository.countUnread(room.getId(), member.getLastReadAt());
-            }
-            return ChatRoomResponse.of(room, memberCount, unreadCount);
-        }).toList();
+        return chatRoomRepository.findRoomSummariesByUserId(userId).stream()
+                .map(s -> ChatRoomResponse.of(
+                        s.getRoom(),
+                        s.getMemberCount() != null ? s.getMemberCount().intValue() : 0,
+                        s.getUnreadCount() != null ? s.getUnreadCount() : 0L))
+                .toList();
     }
 
     public ChatRoomResponse createRoom(UUID userId, ChatRoomCreateRequest req) {
