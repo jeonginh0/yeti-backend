@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -19,6 +20,11 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     Optional<User> findByUsername(String username);
 
     boolean existsByUsername(String username);
+
+    long countByCreatedAtGreaterThanEqual(LocalDateTime from);
+
+    @Query("SELECT u.fcmToken FROM User u WHERE u.active = true AND u.fcmToken IS NOT NULL AND u.fcmToken <> ''")
+    List<String> findAllActiveFcmTokens();
 
     @Query("""
             SELECT u FROM User u

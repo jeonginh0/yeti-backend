@@ -58,4 +58,10 @@ public class Report {
         this.reviewedAt = LocalDateTime.now();
         this.status = ReportStatus.REVIEWED;
     }
+
+    public void dismiss(User admin) {
+        this.reviewedBy = admin;
+        this.reviewedAt = LocalDateTime.now();
+        this.status = ReportStatus.DISMISSED;
+    }
 }
