@@ -21,6 +21,8 @@ import itey.backend.domain.user.entity.enums.FriendshipStatus;
 import itey.backend.domain.user.repository.FriendshipRepository;
 import itey.backend.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -34,6 +36,8 @@ import java.util.*;
 @Transactional
 @RequiredArgsConstructor
 public class ChatService {
+
+    private static final Logger log = LoggerFactory.getLogger(ChatService.class);
 
     private final ChatRoomRepository chatRoomRepository;
     private final ChatRoomMemberRepository chatRoomMemberRepository;
@@ -215,6 +219,7 @@ public class ChatService {
 
     public MessageResponse saveMessage(UUID roomId, UUID senderId, ChatMessageRequest req) {
         if (!chatRoomMemberRepository.existsByRoomIdAndUserId(roomId, senderId)) {
+            log.warn("채팅방 멤버 아님 - roomId={}, senderId(WS인증 사용자)={}", roomId, senderId);
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "채팅방 멤버가 아닙니다.");
         }
 

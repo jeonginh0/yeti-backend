@@ -3,6 +3,7 @@ package itey.backend.domain.user.service;
 import itey.backend.domain.user.dto.UserSearchResponse;
 import itey.backend.domain.user.dto.UserSettingsResponse;
 import itey.backend.domain.user.dto.UserSettingsUpdateRequest;
+import itey.backend.domain.user.entity.User;
 import itey.backend.domain.user.entity.UserSettings;
 import itey.backend.domain.user.repository.UserRepository;
 import itey.backend.domain.user.repository.UserSettingsRepository;
@@ -33,14 +34,15 @@ public class UserService {
                 .toList();
     }
 
+    @Transactional
     public UserSettingsResponse getSettings(UUID userId) {
-        UserSettings settings = findSettings(userId);
+        UserSettings settings = findOrCreateSettings(userId);
         return UserSettingsResponse.from(settings);
     }
 
     @Transactional
     public UserSettingsResponse updateSettings(UUID userId, UserSettingsUpdateRequest req) {
-        UserSettings settings = findSettings(userId);
+        UserSettings settings = findOrCreateSettings(userId);
         settings.update(
                 req.getNotifyBeforeMinAsInt(),
                 req.getNotifyOnInvite(),
@@ -51,8 +53,13 @@ public class UserService {
         return UserSettingsResponse.from(settings);
     }
 
-    private UserSettings findSettings(UUID userId) {
+    // 설정 행이 없는 기존/이메일 가입 계정도 자동 복구(self-healing)
+    private UserSettings findOrCreateSettings(UUID userId) {
         return userSettingsRepository.findByUserId(userId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "설정 정보를 찾을 수 없습니다."));
+                .orElseGet(() -> {
+                    User user = userRepository.findById(userId)
+                            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다."));
+                    return userSettingsRepository.save(UserSettings.builder().user(user).build());
+                });
     }
 }

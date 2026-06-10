@@ -67,7 +67,7 @@ public class AuthService {
 
         String accessToken = jwtProvider.createAccessToken(user.getId(), user.getEmail(), user.isAdmin());
         String refreshToken = tokenService.createRefreshToken(user.getId());
-        return new TokenResponse(accessToken, refreshToken, "Bearer", isNew.get());
+        return new TokenResponse(accessToken, refreshToken, "Bearer", isNew.get(), user.getUsername() == null);
     }
 
     public TokenResponse emailSignup(String email, String password, String username, String nickname) {
@@ -104,10 +104,11 @@ public class AuthService {
             }
             throw new ResponseStatusException(HttpStatus.CONFLICT, "이미 사용 중인 정보입니다.");
         }
+        createDefaultSettings(user);
 
         String accessToken = jwtProvider.createAccessToken(user.getId(), user.getEmail(), user.isAdmin());
         String refreshToken = tokenService.createRefreshToken(user.getId());
-        return new TokenResponse(accessToken, refreshToken, "Bearer", false);
+        return new TokenResponse(accessToken, refreshToken, "Bearer", false, user.getUsername() == null);
     }
 
     public TokenResponse emailLogin(String email, String password) {
@@ -120,7 +121,7 @@ public class AuthService {
 
         String accessToken = jwtProvider.createAccessToken(user.getId(), user.getEmail(), user.isAdmin());
         String refreshToken = tokenService.createRefreshToken(user.getId());
-        return new TokenResponse(accessToken, refreshToken, "Bearer", false);
+        return new TokenResponse(accessToken, refreshToken, "Bearer", false, user.getUsername() == null);
     }
 
     public void completeOnboarding(UUID userId, String username, String nickname) {
@@ -151,7 +152,7 @@ public class AuthService {
         tokenService.delete(refreshToken);
         String newRefreshToken = tokenService.createRefreshToken(userId);
         String accessToken = jwtProvider.createAccessToken(user.getId(), user.getEmail(), user.isAdmin());
-        return new TokenResponse(accessToken, newRefreshToken, "Bearer", false);
+        return new TokenResponse(accessToken, newRefreshToken, "Bearer", false, user.getUsername() == null);
     }
 
     public void logout(String refreshToken) {

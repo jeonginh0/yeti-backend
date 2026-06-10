@@ -39,11 +39,16 @@ public class FriendService {
     }
 
     public FriendResponse sendRequest(UUID requesterId, FriendRequestDto dto) {
-        if (requesterId.equals(findUserByUsername(dto.getUsername()).getId())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "자기 자신에게 친구 요청을 보낼 수 없습니다.");
+        User requester = findUser(requesterId);
+        if (requester.getUsername() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "프로필 설정(사용자명)을 먼저 완료해주세요.");
         }
 
         User addressee = findUserByUsername(dto.getUsername());
+        if (requesterId.equals(addressee.getId())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "자기 자신에게 친구 요청을 보낼 수 없습니다.");
+        }
 
         friendshipRepository.findBetween(requesterId, addressee.getId()).ifPresent(f -> {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
@@ -54,7 +59,6 @@ public class FriendService {
                     });
         });
 
-        User requester = findUser(requesterId);
         Friendship friendship = Friendship.builder()
                 .requester(requester)
                 .addressee(addressee)
