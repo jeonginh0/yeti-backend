@@ -46,7 +46,9 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(corsProperties.getAllowedOrigins());
+        // allowedOriginPatterns(allowedOrigins 대신)로 와일드카드 허용:
+        // 개발 - http://localhost:* , Electron 배포 - app://* 커스텀 스킴
+        config.setAllowedOriginPatterns(corsProperties.getAllowedOrigins());
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("Authorization", "Content-Type", "ngrok-skip-browser-warning"));
         config.setAllowCredentials(true);

@@ -51,6 +51,9 @@ jwt:
 oauth2:
   google:
     client-id: ${GOOGLE_CLIENT_ID:}
+    # ID 토큰 aud 검증 화이트리스트. 웹/데스크톱(Electron) client ID를 콤마로 구분해 등록.
+    # 비워두면 aud 검증을 건너뜀(개발 편의).
+    allowed-client-ids: ${GOOGLE_ALLOWED_CLIENT_IDS:}
   kakao:
     client-id: ${KAKAO_CLIENT_ID:}
 
@@ -64,10 +67,15 @@ supabase:
     bucket: ${SUPABASE_STORAGE_BUCKET:chat-media}
 
 cors:
+  # allowedOriginPatterns로 적용되므로 와일드카드(*) 사용 가능
   allowed-origins:
     - https://repave-radiation-deflector.ngrok-free.dev
     - ${FRONTEND_URL:http://localhost:8081}
-    - http://localhost:5173
+    # 개발: Electron 렌더러 dev 서버 (Vite 5173 등 임의 포트)
+    - http://localhost:*
+    - http://127.0.0.1:*
+    # 배포: Electron 렌더러 커스텀 스킴 (file:// 대신 app:// 스킴 권장)
+    - app://*
 
 decorator:
   datasource:
