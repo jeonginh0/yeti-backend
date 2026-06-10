@@ -34,6 +34,14 @@ spring:
       chat:
         options:
           model: gpt-4o-mini
+      audio:
+        transcription:
+          options:
+            model: whisper-1
+  servlet:
+    multipart:
+      max-file-size: 25MB
+      max-request-size: 25MB
 
 jwt:
   secret: ${JWT_SECRET:default-secret-key-for-development-must-be-at-least-32-bytes}
@@ -59,6 +67,7 @@ cors:
   allowed-origins:
     - https://repave-radiation-deflector.ngrok-free.dev
     - ${FRONTEND_URL:http://localhost:8081}
+    - http://localhost:5173
 
 decorator:
   datasource:

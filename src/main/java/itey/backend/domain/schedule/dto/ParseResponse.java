@@ -21,4 +21,5 @@ public class ParseResponse {
     private String recurrenceRule;
     private Float aiConfidence;
     private boolean clarificationRequired;
+    private String transcribedText;
 }
