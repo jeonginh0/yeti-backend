@@ -11,9 +11,11 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -42,6 +44,14 @@ public class ScheduleController {
             @AuthenticationPrincipal UserPrincipal principal,
             @Valid @RequestBody ParseRequest request) {
         return ResponseEntity.ok(scheduleParseService.parse(principal.getId(), request.getInput()));
+    }
+
+    @Operation(summary = "음성 일정 파싱 (AI, STT)")
+    @PostMapping(value = "/parse/voice", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ParseResponse> parseScheduleVoice(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @RequestParam("audio") MultipartFile audio) {
+        return ResponseEntity.ok(scheduleParseService.parseVoice(principal.getId(), audio));
     }
 
     @Operation(summary = "일정 생성")

@@ -7,14 +7,23 @@ import itey.backend.domain.schedule.dto.ParsedScheduleResult;
 import itey.backend.domain.user.entity.User;
 import itey.backend.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.ai.audio.transcription.AudioTranscriptionPrompt;
+import org.springframework.ai.audio.transcription.AudioTranscriptionResponse;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.converter.BeanOutputConverter;
+import org.springframework.ai.openai.OpenAiAudioTranscriptionModel;
+import org.springframework.ai.openai.OpenAiAudioTranscriptionOptions;
+import org.springframework.ai.openai.api.OpenAiAudioApi.TranscriptResponseFormat;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.Resource;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.LocalDate;
@@ -32,16 +41,59 @@ public class ScheduleParseService {
     private static final BigDecimal OUTPUT_COST_PER_TOKEN = new BigDecimal("0.0000006");
 
     private final ChatClient chatClient;
+    private final OpenAiAudioTranscriptionModel transcriptionModel;
     private final StringRedisTemplate redisTemplate;
     private final AiParseLogRepository aiParseLogRepository;
     private final UserRepository userRepository;
 
     public ParseResponse parse(UUID userId, String input) {
+        User user = prepareUser(userId);
+        return doParse(user, input, null);
+    }
+
+    public ParseResponse parseVoice(UUID userId, MultipartFile audio) {
+        User user = prepareUser(userId);
+        String transcribedText = transcribe(audio);
+        if (transcribedText == null || transcribedText.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "음성에서 텍스트를 인식하지 못했습니다.");
+        }
+        return doParse(user, transcribedText, transcribedText);
+    }
+
+    private User prepareUser(UUID userId) {
         checkDailyLimit(userId);
-
-        User user = userRepository.findById(userId)
+        return userRepository.findById(userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다."));
+    }
 
+    private String transcribe(MultipartFile audio) {
+        if (audio == null || audio.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "음성 파일이 비어 있습니다.");
+        }
+        try {
+            String filename = audio.getOriginalFilename() != null ? audio.getOriginalFilename() : "audio.m4a";
+            Resource resource = new ByteArrayResource(audio.getBytes()) {
+                @Override
+                public String getFilename() {
+                    return filename;
+                }
+            };
+            OpenAiAudioTranscriptionOptions options = OpenAiAudioTranscriptionOptions.builder()
+                    .language("ko")
+                    .responseFormat(TranscriptResponseFormat.TEXT)
+                    .temperature(0f)
+                    .build();
+            AudioTranscriptionResponse response =
+                    transcriptionModel.call(new AudioTranscriptionPrompt(resource, options));
+            return response.getResult().getOutput();
+        } catch (IOException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "음성 파일을 읽을 수 없습니다.");
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "음성 인식에 실패했습니다.");
+        }
+    }
+
+    private ParseResponse doParse(User user, String input, String transcribedText) {
         BeanOutputConverter<ParsedScheduleResult> converter =
                 new BeanOutputConverter<>(ParsedScheduleResult.class);
 
@@ -74,9 +126,9 @@ public class ScheduleParseService {
                     .success(true)
                     .build());
 
-            incrementDailyCounter(userId);
+            incrementDailyCounter(user.getId());
 
-            return toParseResponse(result);
+            return toParseResponse(result, transcribedText);
 
         } catch (ResponseStatusException e) {
             throw e;
@@ -127,7 +179,7 @@ public class ScheduleParseService {
                 """.formatted(LocalDateTime.now());
     }
 
-    private ParseResponse toParseResponse(ParsedScheduleResult result) {
+    private ParseResponse toParseResponse(ParsedScheduleResult result, String transcribedText) {
         LocalDateTime startAt = parseDateTime(result.getStartAt());
         LocalDateTime endAt = parseDateTime(result.getEndAt());
         float confidence = result.getAiConfidence() != null ? result.getAiConfidence() : 0f;
@@ -143,7 +195,8 @@ public class ScheduleParseService {
                 recurring,
                 recurring ? result.getRecurrenceRule() : null,
                 confidence,
-                confidence < 0.7f
+                confidence < 0.7f,
+                transcribedText
         );
     }
 
